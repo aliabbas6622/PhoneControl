@@ -32,6 +32,7 @@
     <string name="action_remove">Remove</string>
     <string name="action_copy">Copy</string>
     <string name="action_clear">Clear</string>
+    <string name="action_send_files">Send files</string>
 
     <!-- Route Types -->
     <string name="route_type_files">FILES</string>
@@ -60,6 +61,12 @@
     <string name="route_type_microphone">MIC</string>
     <string name="route_type_app_launch">LAUNCH</string>
     <string name="route_type_app_stop">STOP</string>
+    <string name="route_type_filedrop">FILE DROP</string>
+    <string name="route_type_sensors">SENSORS</string>
+    <string name="route_type_brightness">BRIGHTNESS</string>
+    <string name="route_type_toast">TOAST</string>
+    <string name="route_type_system">SYSTEM</string>
+    <string name="route_type_wallpaper">WALLPAPER</string>
 
     <!-- Route Management -->
     <string name="route_create_title">Create New Link</string>
@@ -124,6 +131,9 @@
     <string name="home_empty_button">Create Your First Link</string>
     <string name="server_snackbar_started">Server running on port %d</string>
     <string name="server_snackbar_error">Server failed to start</string>
+    <string name="filedrop_imported_success">Added %1$d file(s) to File Drop</string>
+    <string name="filedrop_imported_failed">Could not add the selected files</string>
+    <string name="filedrop_no_selection">No files selected</string>
 
     <!-- Logs Screen -->
     <string name="logs_title">Activity Log (%d)</string>
@@ -164,6 +174,21 @@
     <string name="settings_allow_credentials">Allow login credentials</string>
     <string name="settings_allow_credentials_desc">Allow websites to send login information and cookies</string>
     <string name="settings_saving">Saving…</string>
+    <string name="settings_remote_access">Remote Access</string>
+    <string name="settings_remote_access_desc">Sign in with this token from any browser, on this network or over the internet</string>
+    <string name="settings_access_token">Access token</string>
+    <string name="settings_regenerate_token">New token</string>
+    <string name="settings_token_copied">Token copied</string>
+    <string name="settings_remote_access_warning">Anyone with this token can control this phone. Keep it private; generating a new token signs out every browser.</string>
+    <string name="settings_change_password">Change password</string>
+    <string name="settings_change_password_desc">Choose your own password with at least 8 characters. Every signed-in browser will be signed out.</string>
+    <string name="settings_new_password">New password</string>
+    <string name="settings_confirm_password">Confirm password</string>
+    <string name="settings_password_mismatch">Passwords don\'t match</string>
+    <string name="settings_password_too_short">Use at least 8 characters</string>
+    <string name="settings_password_too_long">Use at most 128 characters</string>
+    <string name="settings_password_invalid">Control characters aren\'t allowed</string>
+    <string name="settings_password_changed">Password changed. Browsers must sign in again.</string>
     <string name="settings_permissions">Permissions</string>
     <string name="settings_permissions_desc">Some features need your permission to work</string>
     <string name="settings_permission_location">Location</string>
@@ -177,6 +202,8 @@
     <string name="settings_permission_granted">Granted</string>
     <string name="settings_permission_not_granted">Not granted</string>
     <string name="settings_permission_grant">Grant</string>
+    <string name="settings_permission_overlay">Display over other apps</string>
+    <string name="settings_permission_overlay_desc">Lets the server launch or stop apps while it runs in the background</string>
 
     <!-- Dialogs -->
     <string name="dialog_welcome_title">Welcome to HTTP on Fire!</string>
@@ -245,6 +272,7 @@
     <string name="cd_route_type">%s Route type</string>
     <string name="cd_remove_header">Remove header</string>
     <string name="cd_add_route">Add Link</string>
+    <string name="cd_send_files">Send files to device</string>
 
     <!-- Server Actions -->
     <string name="server_start">Start</string>

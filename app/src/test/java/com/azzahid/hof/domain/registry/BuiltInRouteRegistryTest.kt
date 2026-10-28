@@ -10,8 +10,8 @@ import org.junit.Test
 class BuiltInRouteRegistryTest {
 
     @Test
-    fun `registry contains 5 built-in routes`() {
-        assertEquals(5, BuiltInRouteRegistry.routes.size)
+    fun `registry contains all built-in routes`() {
+        assertEquals(30, BuiltInRouteRegistry.routes.size)
     }
 
     @Test
@@ -88,12 +88,15 @@ class BuiltInRouteRegistryTest {
     @Test
     fun `getAllPreferenceKeys returns all keys`() {
         val keys = BuiltInRouteRegistry.getAllPreferenceKeys()
-        assertEquals(5, keys.size)
+        assertEquals(BuiltInRouteRegistry.routes.size, keys.size)
         assertTrue(keys.contains("enable_status"))
         assertTrue(keys.contains("enable_openapi"))
         assertTrue(keys.contains("enable_swagger"))
         assertTrue(keys.contains("enable_notification"))
         assertTrue(keys.contains("enable_proxy"))
+        assertTrue(keys.contains("enable_file-drop"))
+        assertTrue(keys.contains("enable_sensors"))
+        assertTrue(keys.contains("enable_wallpaper"))
     }
 
     @Test
@@ -109,6 +112,12 @@ class BuiltInRouteRegistryTest {
         assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.SwaggerRoute))
         assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.NotificationRoute))
         assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.ProxyRoute))
+        assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.FileDropRoute))
+        assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.SensorsRoute))
+        assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.BrightnessRoute))
+        assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.ToastRoute))
+        assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.SystemRoute))
+        assertNotNull(BuiltInRouteRegistry.findByRouteType(RouteType.WallpaperRoute))
     }
 
     @Test

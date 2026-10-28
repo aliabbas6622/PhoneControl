@@ -1,7 +1,6 @@
 package com.azzahid.hof.ui.components
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -40,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -60,27 +60,26 @@ fun RouteCard(
 ) {
     val isBuiltInRoute = route.type is RouteType.BuiltInRoute
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (route.isEnabled) {
-                    Modifier.clickable { onShare() }
-                } else {
-                    Modifier
-                }
-            ),
+        modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (route.isEnabled)
                 MaterialTheme.colorScheme.surface
             else
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                MaterialTheme.colorScheme.surfaceContainerLow
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline),
-        shape = RoundedCornerShape(12.dp)
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (route.isEnabled) {
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+            } else {
+                MaterialTheme.colorScheme.outlineVariant
+            }
+        ),
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -293,11 +292,54 @@ fun RouteCard(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+
+                        is RouteType.FileDropRoute -> {
+                            TypeChip(
+                                text = stringResource(R.string.route_type_filedrop),
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        is RouteType.SensorsRoute -> {
+                            TypeChip(
+                                text = stringResource(R.string.route_type_sensors),
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+
+                        is RouteType.BrightnessRoute -> {
+                            TypeChip(
+                                text = stringResource(R.string.route_type_brightness),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        is RouteType.ToastRoute -> {
+                            TypeChip(
+                                text = stringResource(R.string.route_type_toast),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        is RouteType.SystemRoute -> {
+                            TypeChip(
+                                text = stringResource(R.string.route_type_system),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        is RouteType.WallpaperRoute -> {
+                            TypeChip(
+                                text = stringResource(R.string.route_type_wallpaper),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
 
                     Text(
                         text = route.path,
                         style = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Medium
                         ),
                         maxLines = 1,
@@ -309,14 +351,13 @@ fun RouteCard(
                     var showMenu by remember { mutableStateOf(false) }
 
                     IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(32.dp)
+                        onClick = { showMenu = true }
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.MoreVert,
                             contentDescription = stringResource(R.string.cd_more_options),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 

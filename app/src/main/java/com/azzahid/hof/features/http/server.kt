@@ -5,6 +5,8 @@ import android.os.Build
 import com.azzahid.hof.domain.model.CIOEmbeddedServer
 import com.azzahid.hof.domain.model.CorsConfiguration
 import com.azzahid.hof.domain.model.Route
+import com.azzahid.hof.features.http.configuration.addPublicAuthRoutes
+import com.azzahid.hof.features.http.configuration.configureAuthentication
 import com.azzahid.hof.features.http.configuration.configureContentNegotiation
 import com.azzahid.hof.features.http.configuration.configureCors
 import com.azzahid.hof.features.http.configuration.configureLogging
@@ -26,6 +28,8 @@ internal suspend fun buildServerWithConfiguration(
     enableLogs: Boolean,
     logLevel: String,
     routes: List<Route>,
+    accessTokenProvider: suspend () -> String,
+    accessTokenUpdater: suspend (String) -> Unit,
     httpRequestLogger: HttpRequestLogger? = null
 ): CIOEmbeddedServer {
     return CoroutineScope(coroutineContext).embeddedServer(
@@ -35,7 +39,8 @@ internal suspend fun buildServerWithConfiguration(
     ) {
         setAndroidContext(androidContext)
         configureServerWithSettings(corsConfig, enableLogs, logLevel, httpRequestLogger)
-        configureRoutingWithRoutes(routes)
+        configureAuthentication(accessTokenProvider)
+        configureRoutingWithRoutes(routes, accessTokenProvider, accessTokenUpdater)
     }
 }
 
@@ -71,8 +76,13 @@ internal fun Application.configureServerWithSettings(
     }
 }
 
-internal fun Application.configureRoutingWithRoutes(routes: List<Route>) {
+internal fun Application.configureRoutingWithRoutes(
+    routes: List<Route>,
+    accessTokenProvider: suspend () -> String,
+    accessTokenUpdater: suspend (String) -> Unit
+) {
     routing {
+        addPublicAuthRoutes(accessTokenProvider, accessTokenUpdater)
         routes.filter { it.isEnabled }.forEach { route ->
             route.type.handler(route).invoke(this)
         }

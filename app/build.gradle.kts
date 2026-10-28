@@ -26,8 +26,8 @@ android {
         applicationId = "com.azzahid.hof"
         minSdk = 24
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.0.6+${versionCode}"
+        versionCode = 9
+        versionName = "0.1.0+${versionCode}"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -123,6 +123,7 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.server.call.logging)
     implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.forwarded.header)
     implementation(libs.ktor.swagger.ui)
 
     implementation(libs.kotlinx.serialization.json)

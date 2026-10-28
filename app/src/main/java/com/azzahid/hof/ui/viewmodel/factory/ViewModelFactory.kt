@@ -16,6 +16,7 @@ import com.azzahid.hof.services.AndroidFilePermissionService
 import com.azzahid.hof.services.AndroidPermissionService
 import com.azzahid.hof.services.AndroidQRCodeService
 import com.azzahid.hof.services.ClipboardService
+import com.azzahid.hof.services.FileDropService
 import com.azzahid.hof.services.FilePermissionService
 import com.azzahid.hof.services.PermissionService
 import com.azzahid.hof.services.QRCodeService
@@ -62,6 +63,10 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
         AndroidNetworkRepository()
     }
 
+    private val fileDropService: FileDropService by lazy {
+        FileDropService(application)
+    }
+
     private val filePermissionService: FilePermissionService by lazy {
         AndroidFilePermissionService(application.contentResolver)
     }
@@ -89,6 +94,7 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
                     clipboardService = clipboardService,
                     qrCodeService = qrCodeService,
                     networkRepository = networkRepository,
+                    fileDropService = fileDropService,
                     application = application
                 ) as T
             }

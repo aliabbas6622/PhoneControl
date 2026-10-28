@@ -10,12 +10,14 @@ import com.azzahid.hof.features.http.routing.routes.builtin.addAppLaunchRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addAppListRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addAppStopRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addBatteryRoute
+import com.azzahid.hof.features.http.routing.routes.builtin.addBrightnessRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addCameraRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addDashboardRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addClipboardRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addContactsRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addDeviceInfoRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addEchoRoute
+import com.azzahid.hof.features.http.routing.routes.builtin.addFileDropRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addFlashlightRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addLocationRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addMicrophoneRoute
@@ -24,11 +26,15 @@ import com.azzahid.hof.features.http.routing.routes.builtin.addOpenApiRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addProxyRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addQrCodeRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addRingRoute
+import com.azzahid.hof.features.http.routing.routes.builtin.addSensorsRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addStatusRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addSwaggerRoute
+import com.azzahid.hof.features.http.routing.routes.builtin.addSystemRoute
+import com.azzahid.hof.features.http.routing.routes.builtin.addToastRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addTtsRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addVibrateRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addVolumeRoute
+import com.azzahid.hof.features.http.routing.routes.builtin.addWallpaperRoute
 import com.azzahid.hof.features.http.routing.routes.builtin.addWifiInfoRoute
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -266,6 +272,48 @@ sealed class RouteType {
     object DashboardRoute : BuiltInRoute() {
         override fun handler(route: Route): ServerRoute.() -> Unit = {
             addDashboardRoute(route)
+        }
+    }
+
+    @Serializable
+    object FileDropRoute : BuiltInRoute() {
+        override fun handler(route: Route): ServerRoute.() -> Unit = {
+            addFileDropRoute(route)
+        }
+    }
+
+    @Serializable
+    object SensorsRoute : BuiltInRoute() {
+        override fun handler(route: Route): ServerRoute.() -> Unit = {
+            addSensorsRoute(route)
+        }
+    }
+
+    @Serializable
+    object BrightnessRoute : BuiltInRoute() {
+        override fun handler(route: Route): ServerRoute.() -> Unit = {
+            addBrightnessRoute(route)
+        }
+    }
+
+    @Serializable
+    object ToastRoute : BuiltInRoute() {
+        override fun handler(route: Route): ServerRoute.() -> Unit = {
+            addToastRoute(route)
+        }
+    }
+
+    @Serializable
+    object SystemRoute : BuiltInRoute() {
+        override fun handler(route: Route): ServerRoute.() -> Unit = {
+            addSystemRoute(route)
+        }
+    }
+
+    @Serializable
+    object WallpaperRoute : BuiltInRoute() {
+        override fun handler(route: Route): ServerRoute.() -> Unit = {
+            addWallpaperRoute(route)
         }
     }
 

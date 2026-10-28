@@ -92,6 +92,8 @@ class ServerConfigurationService(
             enableLogs = config.enableLogs,
             logLevel = config.logLevel,
             routes = config.routes,
+            accessTokenProvider = settingsRepository::getOrCreateAccessToken,
+            accessTokenUpdater = settingsRepository::setAccessToken,
             httpRequestLogger = httpRequestLogger
         )
     }

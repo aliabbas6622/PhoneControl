@@ -5,13 +5,16 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,12 +22,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -32,11 +38,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,17 +55,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.azzahid.hof.R
+import com.azzahid.hof.domain.model.AccessPassword
+import com.azzahid.hof.domain.model.AccessPasswordError
 import com.azzahid.hof.domain.state.SettingsUiState
 import com.azzahid.hof.ui.providers.LocalViewModelFactory
 import com.azzahid.hof.ui.viewmodel.HomeViewModel
+import com.azzahid.hof.ui.viewmodel.PasswordChangeResult
 import com.azzahid.hof.ui.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,6 +85,16 @@ fun TabSettingsScreen() {
     val settingsViewModel: SettingsViewModel = viewModel(factory = viewModelFactory)
     val homeViewModel: HomeViewModel = viewModel(factory = viewModelFactory)
     val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val passwordChangeResult by settingsViewModel.passwordChangeResult.collectAsStateWithLifecycle()
+
+    val activity = context as? ComponentActivity
+    DisposableEffect(activity) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) settingsViewModel.refreshAccessToken()
+        }
+        activity?.lifecycle?.addObserver(observer)
+        onDispose { activity?.lifecycle?.removeObserver(observer) }
+    }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -117,7 +146,11 @@ fun TabSettingsScreen() {
             onUpdateAutoCleanupEnabled = settingsViewModel::updateAutoCleanupEnabled,
             onUpdateCorsAllowAnyHost = settingsViewModel::updateCorsAllowAnyHost,
             onUpdateCorsAllowedHosts = settingsViewModel::updateCorsAllowedHosts,
-            onUpdateCorsAllowCredentials = settingsViewModel::updateCorsAllowCredentials
+            onUpdateCorsAllowCredentials = settingsViewModel::updateCorsAllowCredentials,
+            onRegenerateToken = settingsViewModel::regenerateAccessToken,
+            onChangePassword = settingsViewModel::changeAccessToken,
+            passwordChangeResult = passwordChangeResult,
+            onPasswordChangeResultConsumed = settingsViewModel::clearPasswordChangeResult
         )
     }
 }
@@ -134,7 +167,11 @@ private fun SettingsContent(
     onUpdateAutoCleanupEnabled: (Boolean) -> Unit,
     onUpdateCorsAllowAnyHost: (Boolean) -> Unit,
     onUpdateCorsAllowedHosts: (String) -> Unit,
-    onUpdateCorsAllowCredentials: (Boolean) -> Unit
+    onUpdateCorsAllowCredentials: (Boolean) -> Unit,
+    onRegenerateToken: () -> Unit,
+    onChangePassword: (String) -> Unit,
+    passwordChangeResult: PasswordChangeResult?,
+    onPasswordChangeResultConsumed: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -150,6 +187,14 @@ private fun SettingsContent(
             onUpdateBackgroundServiceEnabled = onUpdateBackgroundServiceEnabled,
             onUpdateEnableLogs = onUpdateEnableLogs,
             onUpdateDefaultPort = onUpdateDefaultPort
+        )
+
+        RemoteAccessCard(
+            accessToken = settingsUiState.accessToken,
+            onRegenerateToken = onRegenerateToken,
+            onChangePassword = onChangePassword,
+            passwordChangeResult = passwordChangeResult,
+            onPasswordChangeResultConsumed = onPasswordChangeResultConsumed
         )
 
         AnimatedVisibility(visible = settingsUiState.enableLogs) {
@@ -173,6 +218,20 @@ private fun SettingsContent(
 }
 
 @Composable
+private fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(modifier = Modifier.padding(20.dp), content = content)
+    }
+}
+
+@Composable
 private fun ServerConfigCard(
     settingsUiState: SettingsUiState,
     onUpdateAutoStart: (Boolean) -> Unit,
@@ -180,8 +239,7 @@ private fun ServerConfigCard(
     onUpdateEnableLogs: (Boolean) -> Unit,
     onUpdateDefaultPort: (String) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(20.dp)) {
+    SettingsCard {
             Text(
                 text = stringResource(R.string.settings_server_config),
                 style = MaterialTheme.typography.titleMedium
@@ -232,7 +290,6 @@ private fun ServerConfigCard(
                     onCheckedChange = onUpdateEnableLogs
                 )
             }
-        }
     }
 }
 
@@ -245,13 +302,12 @@ private fun LogManagementCard(
 ) {
     var showLogManagement by rememberSaveable { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(20.dp)) {
+    SettingsCard {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showLogManagement = !showLogManagement }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -312,7 +368,6 @@ private fun LogManagementCard(
                     )
                 }
             }
-        }
     }
 }
 
@@ -325,13 +380,12 @@ private fun AdvancedSettingsCard(
 ) {
     var showAdvanced by rememberSaveable { mutableStateOf(false) }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(20.dp)) {
+    SettingsCard {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showAdvanced = !showAdvanced }
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -381,7 +435,6 @@ private fun AdvancedSettingsCard(
                     )
                 }
             }
-        }
     }
 }
 
@@ -392,9 +445,225 @@ private data class PermissionItem(
 )
 
 @Composable
+private fun RemoteAccessCard(
+    accessToken: String,
+    onRegenerateToken: () -> Unit,
+    onChangePassword: (String) -> Unit,
+    passwordChangeResult: PasswordChangeResult?,
+    onPasswordChangeResultConsumed: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    var showChangePasswordDialog by rememberSaveable { mutableStateOf(false) }
+    var passwordError by remember { mutableStateOf<AccessPasswordError?>(null) }
+
+    LaunchedEffect(passwordChangeResult) {
+        when (val result = passwordChangeResult) {
+            PasswordChangeResult.Success -> {
+                showChangePasswordDialog = false
+                passwordError = null
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.settings_password_changed),
+                    Toast.LENGTH_SHORT
+                ).show()
+                onPasswordChangeResultConsumed()
+            }
+
+            is PasswordChangeResult.Invalid -> {
+                passwordError = result.error
+                onPasswordChangeResultConsumed()
+            }
+
+            null -> Unit
+        }
+    }
+
+    SettingsCard {
+            Text(
+                text = stringResource(R.string.settings_remote_access),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.settings_remote_access_desc),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.settings_access_token),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = accessToken.ifEmpty { "…" },
+                    style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        clipboard.setText(AnnotatedString(accessToken))
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.settings_token_copied),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    enabled = accessToken.isNotEmpty()
+                ) {
+                    Text(stringResource(R.string.action_copy))
+                }
+                OutlinedButton(onClick = onRegenerateToken) {
+                    Text(stringResource(R.string.settings_regenerate_token))
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            FilledTonalButton(
+                onClick = {
+                    passwordError = null
+                    showChangePasswordDialog = true
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(stringResource(R.string.settings_change_password))
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = stringResource(R.string.settings_remote_access_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+    }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            passwordError = passwordError,
+            onErrorDismissed = { passwordError = null },
+            onDismiss = {
+                showChangePasswordDialog = false
+                passwordError = null
+            },
+            onSave = onChangePassword
+        )
+    }
+}
+
+@Composable
+private fun ChangePasswordDialog(
+    passwordError: AccessPasswordError?,
+    onErrorDismissed: () -> Unit,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirm by rememberSaveable { mutableStateOf("") }
+    var showMismatch by rememberSaveable { mutableStateOf(false) }
+
+    val errorMessage: String? = when {
+        showMismatch -> stringResource(R.string.settings_password_mismatch)
+        passwordError != null -> stringResource(passwordErrorTextRes(passwordError))
+        else -> null
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_change_password)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_change_password_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        showMismatch = false
+                        onErrorDismissed()
+                    },
+                    label = { Text(stringResource(R.string.settings_new_password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    isError = errorMessage != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = {
+                        confirm = it
+                        showMismatch = false
+                        onErrorDismissed()
+                    },
+                    label = { Text(stringResource(R.string.settings_confirm_password)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    isError = errorMessage != null,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val normalized = AccessPassword.normalize(password)
+                    if (normalized != AccessPassword.normalize(confirm)) {
+                        showMismatch = true
+                    } else {
+                        onSave(normalized)
+                    }
+                },
+                enabled = password.isNotEmpty() && confirm.isNotEmpty()
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
+        }
+    )
+}
+
+private fun passwordErrorTextRes(error: AccessPasswordError): Int = when (error) {
+    AccessPasswordError.TOO_SHORT -> R.string.settings_password_too_short
+    AccessPasswordError.TOO_LONG -> R.string.settings_password_too_long
+    AccessPasswordError.INVALID_CHARACTERS -> R.string.settings_password_invalid
+}
+
+@Composable
 private fun PermissionsCard() {
     val context = LocalContext.current
     var refreshKey by remember { mutableIntStateOf(0) }
+
+    val activity = context as? ComponentActivity
+    DisposableEffect(activity) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) refreshKey++
+        }
+        activity?.lifecycle?.addObserver(observer)
+        onDispose { activity?.lifecycle?.removeObserver(observer) }
+    }
 
     val permissions = remember {
         listOf(
@@ -427,8 +696,7 @@ private fun PermissionsCard() {
         refreshKey++
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(20.dp)) {
+    SettingsCard {
             Text(
                 text = stringResource(R.string.settings_permissions),
                 style = MaterialTheme.typography.titleMedium
@@ -476,7 +744,26 @@ private fun PermissionsCard() {
                     )
                 }
             }
-        }
+
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+            val overlayGranted = remember(refreshKey) { Settings.canDrawOverlays(context) }
+            PermissionRow(
+                title = stringResource(R.string.settings_permission_overlay),
+                description = stringResource(R.string.settings_permission_overlay_desc),
+                isGranted = overlayGranted,
+                onGrant = {
+                    context.startActivity(
+                        Intent(
+                            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                            Uri.parse("package:${context.packageName}")
+                        )
+                    )
+                }
+            )
     }
 }
 

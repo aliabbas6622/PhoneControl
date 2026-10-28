@@ -13,5 +13,6 @@ data class SettingsUiState(
     val corsAllowAnyHost: Boolean = false,
     val corsAllowedHosts: String = "",
     val corsAllowCredentials: Boolean = false,
+    val accessToken: String = "",
     val isLoading: Boolean = false
 )

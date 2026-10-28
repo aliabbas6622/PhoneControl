@@ -1,9 +1,11 @@
 package com.azzahid.hof.ui.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.azzahid.hof.R
 import com.azzahid.hof.data.repository.NetworkRepository
 import com.azzahid.hof.data.repository.RouteRepository
 import com.azzahid.hof.data.repository.SettingsRepository
@@ -11,10 +13,14 @@ import com.azzahid.hof.domain.model.Route
 import com.azzahid.hof.domain.state.HomeUiState
 import com.azzahid.hof.domain.state.ServerStatus
 import com.azzahid.hof.services.ClipboardService
+import com.azzahid.hof.services.FileDropService
 import com.azzahid.hof.services.QRCodeService
 import com.azzahid.hof.services.ServerServiceManager
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -26,11 +32,15 @@ class HomeViewModel(
     private val clipboardService: ClipboardService,
     private val qrCodeService: QRCodeService,
     private val networkRepository: NetworkRepository,
+    private val fileDropService: FileDropService,
     application: Application
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private val _userMessages = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val userMessages: SharedFlow<String> = _userMessages.asSharedFlow()
 
     init {
         loadRoutes()
@@ -153,6 +163,32 @@ class HomeViewModel(
 
     fun copyToClipboard(text: String) {
         clipboardService.copyToClipboard(text, "HTTP on Fire URL")
+    }
+
+    fun importFiles(uris: List<Uri>) {
+        val app = getApplication<Application>()
+
+        if (uris.isEmpty()) {
+            viewModelScope.launch {
+                _userMessages.emit(app.getString(R.string.filedrop_no_selection))
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val imported = fileDropService.importUris(uris)
+                val message = if (imported.isEmpty()) {
+                    app.getString(R.string.filedrop_imported_failed)
+                } else {
+                    app.getString(R.string.filedrop_imported_success, imported.size)
+                }
+                _userMessages.emit(message)
+            } catch (e: Exception) {
+                Log.e("HomeViewModel", "Failed to import files into File Drop", e)
+                _userMessages.emit(app.getString(R.string.filedrop_imported_failed))
+            }
+        }
     }
 
     fun generateServerQr(url: String) {

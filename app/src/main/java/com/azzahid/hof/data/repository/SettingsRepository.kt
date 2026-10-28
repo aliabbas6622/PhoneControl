@@ -13,6 +13,9 @@ import com.azzahid.hof.domain.registry.BuiltInRouteRegistry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.security.SecureRandom
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -30,7 +33,13 @@ class SettingsRepository(private val context: Context) {
         private val CORS_ALLOW_ANY_HOST_KEY = booleanPreferencesKey("cors_allow_any_host")
         private val CORS_ALLOWED_HOSTS_KEY = stringPreferencesKey("cors_allowed_hosts")
         private val CORS_ALLOW_CREDENTIALS_KEY = booleanPreferencesKey("cors_allow_credentials")
+        private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
+
+        private const val TOKEN_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
+        private const val TOKEN_LENGTH = 20
     }
+
+    private val accessTokenMutex = Mutex()
 
     val autoStart: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
@@ -150,6 +159,54 @@ class SettingsRepository(private val context: Context) {
     suspend fun updateCorsAllowCredentials(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[CORS_ALLOW_CREDENTIALS_KEY] = enabled
+        }
+    }
+
+    suspend fun getOrCreateAccessToken(): String {
+        context.dataStore.data.first()[ACCESS_TOKEN_KEY]?.takeIf { it.isNotBlank() }?.let { return it }
+        return accessTokenMutex.withLock {
+            val stored = context.dataStore.data.first()[ACCESS_TOKEN_KEY]
+            if (!stored.isNullOrBlank()) {
+                stored
+            } else {
+                generateAccessToken().also { token ->
+                    context.dataStore.edit { preferences ->
+                        preferences[ACCESS_TOKEN_KEY] = token
+                    }
+                }
+            }
+        }
+    }
+
+    suspend fun regenerateAccessToken(): String {
+        return accessTokenMutex.withLock {
+            generateAccessToken().also { token ->
+                context.dataStore.edit { preferences ->
+                    preferences[ACCESS_TOKEN_KEY] = token
+                }
+            }
+        }
+    }
+
+    /**
+     * Replaces the effective access credential. Callers are responsible for validating
+     * the value (see [com.azzahid.hof.domain.model.AccessPassword]); this only trims and stores it.
+     */
+    suspend fun setAccessToken(token: String) {
+        val normalized = token.trim()
+        accessTokenMutex.withLock {
+            context.dataStore.edit { preferences ->
+                preferences[ACCESS_TOKEN_KEY] = normalized
+            }
+        }
+    }
+
+    private fun generateAccessToken(): String {
+        val random = SecureRandom()
+        return buildString(TOKEN_LENGTH) {
+            repeat(TOKEN_LENGTH) {
+                append(TOKEN_ALPHABET[random.nextInt(TOKEN_ALPHABET.length)])
+            }
         }
     }
 

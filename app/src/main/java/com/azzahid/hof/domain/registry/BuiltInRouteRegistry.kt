@@ -17,6 +17,15 @@ object BuiltInRouteRegistry {
             order = -1000
         ),
         Route(
+            id = "built-in-file-drop",
+            path = "/files",
+            method = HttpMethod.Get,
+            description = "Shared file inbox for uploading and downloading files",
+            type = RouteType.FileDropRoute,
+            isEnabled = true,
+            order = -980
+        ),
+        Route(
             id = "built-in-openapi",
             path = "/api/json",
             method = HttpMethod.Get,
@@ -209,7 +218,7 @@ object BuiltInRouteRegistry {
             id = "built-in-app-stop",
             path = "/api/apps/stop",
             method = HttpMethod.Post,
-            description = "Stop background processes of an app by package name",
+            description = "Stop an app by sending it to the background and killing it",
             type = RouteType.AppStopRoute,
             isEnabled = true,
             order = -977
@@ -222,6 +231,51 @@ object BuiltInRouteRegistry {
             type = RouteType.DashboardRoute,
             isEnabled = true,
             order = -976
+        ),
+        Route(
+            id = "built-in-sensors",
+            path = "/api/sensors",
+            method = HttpMethod.Get,
+            description = "Live readings from device sensors",
+            type = RouteType.SensorsRoute,
+            isEnabled = true,
+            order = -975
+        ),
+        Route(
+            id = "built-in-brightness",
+            path = "/api/brightness",
+            method = HttpMethod.Get,
+            description = "Read or set screen brightness",
+            type = RouteType.BrightnessRoute,
+            isEnabled = true,
+            order = -974
+        ),
+        Route(
+            id = "built-in-toast",
+            path = "/api/toast",
+            method = HttpMethod.Post,
+            description = "Show a toast message on the device",
+            type = RouteType.ToastRoute,
+            isEnabled = true,
+            order = -973
+        ),
+        Route(
+            id = "built-in-system",
+            path = "/api/system",
+            method = HttpMethod.Get,
+            description = "System uptime, CPU, and runtime details",
+            type = RouteType.SystemRoute,
+            isEnabled = true,
+            order = -972
+        ),
+        Route(
+            id = "built-in-wallpaper",
+            path = "/api/wallpaper",
+            method = HttpMethod.Post,
+            description = "Set the home and/or lock screen wallpaper from an uploaded image",
+            type = RouteType.WallpaperRoute,
+            isEnabled = true,
+            order = -971
         )
     )
 

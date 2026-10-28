@@ -6,6 +6,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.azzahid.hof.data.repository.SettingsRepository
+import com.azzahid.hof.domain.model.AccessPassword
+import com.azzahid.hof.domain.model.AccessPasswordError
 import com.azzahid.hof.domain.state.SettingsUiState
 import com.azzahid.hof.services.PermissionService
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +15,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+
+sealed interface PasswordChangeResult {
+    data object Success : PasswordChangeResult
+    data class Invalid(val error: AccessPasswordError) : PasswordChangeResult
+}
 
 class SettingsViewModel(
     private val settingsRepository: SettingsRepository,
@@ -26,8 +33,54 @@ class SettingsViewModel(
     private val _showPermissionRationale = MutableStateFlow(false)
     val showPermissionRationale: StateFlow<Boolean> = _showPermissionRationale.asStateFlow()
 
+    private val _passwordChangeResult = MutableStateFlow<PasswordChangeResult?>(null)
+    val passwordChangeResult: StateFlow<PasswordChangeResult?> = _passwordChangeResult.asStateFlow()
+
     init {
         loadSettings()
+        loadAccessToken()
+    }
+
+    private fun loadAccessToken() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                accessToken = settingsRepository.getOrCreateAccessToken()
+            )
+        }
+    }
+
+    fun regenerateAccessToken() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                accessToken = settingsRepository.regenerateAccessToken()
+            )
+        }
+    }
+
+    fun refreshAccessToken() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                accessToken = settingsRepository.getOrCreateAccessToken()
+            )
+        }
+    }
+
+    fun changeAccessToken(newPassword: String) {
+        val normalized = AccessPassword.normalize(newPassword)
+        val error = AccessPassword.validate(normalized)
+        if (error != null) {
+            _passwordChangeResult.value = PasswordChangeResult.Invalid(error)
+            return
+        }
+        viewModelScope.launch {
+            settingsRepository.setAccessToken(normalized)
+            _uiState.value = _uiState.value.copy(accessToken = normalized)
+            _passwordChangeResult.value = PasswordChangeResult.Success
+        }
+    }
+
+    fun clearPasswordChangeResult() {
+        _passwordChangeResult.value = null
     }
 
     private fun loadSettings() {
